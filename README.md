@@ -5,7 +5,7 @@ This fork runs upstream rTorrent/libtorrent on Alpine. It keeps the original con
 
 GitHub Actions builds and tests both `linux/amd64` and `linux/arm64` on native runners before publishing a multi-platform image to `ghcr.io/sparticuz/docker-rtorrent`. Docker selects the matching architecture when pulling. Each tested architecture is also published as `sha-<full-commit-sha>-<architecture>`.
 
-The `Check for rTorrent updates` workflow checks stable upstream releases daily at 06:00 UTC, or manually on a selected branch. It updates both source archives and their verified SHA-256 checksums, commits the Dockerfile, and dispatches the existing native build/test/publish workflow. Scheduled checks run on the default branch; failed builds do not update the multi-platform image tags.
+The self-contained Bash workflow `.github/workflows/check-updates.yml` checks stable upstream releases daily at 06:00 UTC, or manually on a selected branch. It updates both source archives and their verified SHA-256 checksums, commits the Dockerfile, and dispatches the existing native build/test/publish workflow. Scheduled checks run on the default branch; failed builds do not update the multi-platform image tags.
 
 ## Configuration
 
