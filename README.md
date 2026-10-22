@@ -1,34 +1,45 @@
 # rTorrent on Alpine
-This is a bare-bones docker container for rTorrent.  The GUI output is locked out, instead a unix socket is exposed for you to use with a plain webserver, [ruTorrent](https://github.com/Novik/ruTorrent)/[Flood](https://github.com/jfurrow/flood) or what have you.
+This fork runs upstream rTorrent/libtorrent on Alpine. It keeps the original container's mount layout and exposes XML-RPC and JSON-RPC over a shared Unix SCGI socket for [Flood](https://github.com/jesec/flood) or an HTTP proxy. No web UI is bundled.
+
+## Published image
+
+GitHub Actions builds and tests both `linux/amd64` and `linux/arm64` on native runners before publishing a multi-platform image to `ghcr.io/sparticuz/docker-rtorrent`. Docker selects the matching architecture when pulling. Each tested architecture is also published as `sha-<full-commit-sha>-<architecture>`.
+
+The self-contained Bash workflow `.github/workflows/check-updates.yml` checks stable upstream releases daily at 06:00 UTC, or manually on a selected branch. It updates both source archives and their verified SHA-256 checksums, commits the Dockerfile, and dispatches the existing native build/test/publish workflow. Scheduled checks run on the default branch; failed builds do not update the multi-platform image tags.
 
 ## Configuration
 
-The container creates a "sane defaults" configuration that is tailored to the technicalities of docker (and this specific container). You are encouraged (but not required) to use it. You can bootstrap it to a config volume by running the container like so:  `docker run --rm -v "$(pwd)/config:/config" looselyrigorous/rtorrent bootstrap`
+The container copies its default configuration only if `/config/.rtorrent.rc` does not exist.
+
+```sh
+mkdir -p config downloads session watch socket
+docker run --rm -v "$(pwd)/config:/config" ghcr.io/sparticuz/docker-rtorrent:latest bootstrap
+```
+
+Existing configs are not migrated automatically. When migrating to this image, use `schedule` instead of `schedule2` and `network.listen.port.*` instead of `network.port_*`. Remove `encoding.add`, `trackers.use_udp.set`, and obsolete `network.http.max_open.set` / `network.max_open_files.set` settings. The default config now leaves file/socket allocation to upstream and uses `protocol.encryption.set = allow`.
 
 ## Running
 
-You could use `docker` for this but I prefer compose files. Nevertheless, you can use something like this
+Run the published image directly:
 
 ```
-docker run -itd \
+docker run -d --stop-timeout 120 \
 	-v ./downloads:/downloads \
 	-v ./session:/session \
 	-v ./watch:/watch \
 	-v ./config:/config \
 	-v rtorrent-sock:/socket \
 	-p 49161:49161 \
-	-p 49161:49161/udp \
 	-e PUID=1000 -e PGID=1000 \
-	looselyrigorous/rtorrent:0.3.3
+	ghcr.io/sparticuz/docker-rtorrent:latest
 ```
 
-Look like a pain in the ass to paste and edit? Well that's because **it is**. Just use a compose file:
+Or use Docker Compose:
 
 ```yaml
-version: "3"
 services:
   rtorrent:
-    image: looselyrigorous/rtorrent:0.3.3
+    image: ghcr.io/sparticuz/docker-rtorrent:latest
     volumes:
       - "./downloads:/downloads"
       - "./session:/session"
@@ -37,7 +48,6 @@ services:
       - "rtorrent-sock:/socket"
     ports:
       - "49161:49161"
-      - "49161:49161/udp"
     environment:
       - PUID=1000
       - PGID=1000
@@ -45,7 +55,35 @@ volumes:
   rtorrent-sock: {}
 ```
 
-Save it as `docker-compose.yml` . Now all you have to do is `docker-compose up -d` and you're off to the races. There are docker-compose files in the compose directory for more complete setups.
+Save it as `docker-compose.yml` and run `docker compose up -d` after preparing directory ownership.
+
+### Flood integration
+
+Use [Flood's official container instructions](https://github.com/jesec/flood#docker) and [container examples](https://github.com/jesec/flood/discussions/120). To connect Flood to this image:
+
+- Mount the same socket volume into both containers at `/socket`. If using separate Compose projects, reference the same external volume rather than creating project-local volumes.
+- Select rTorrent with Unix socket `/socket/rtorrent.sock`. Run Flood with the matching UID or GID so it can access the socket.
+- Mount the same downloads directory at `/downloads` in both containers, with permissions that allow Flood to manage the files.
+
+Merge this `flood` service into the same `services` block as the rTorrent example above; keep its existing `rtorrent-sock` volume declaration:
+
+```yaml
+services:
+  flood:
+    image: jesec/flood
+    user: "1000:1000"
+    command: ["--host=0.0.0.0", "--rundir=/config", "--allowedpath=/downloads"]
+    depends_on:
+      - rtorrent
+    volumes:
+      - "./flood:/config"
+      - "./downloads:/downloads"
+      - "rtorrent-sock:/socket"
+    ports:
+      - "127.0.0.1:3000:3000"
+```
+
+Create `./flood` and `./downloads` before starting Compose and make both writable by `1000:1000`. If you change rTorrent's `PUID:PGID`, update Flood's `user` to match. Run `docker compose up -d`, open `http://localhost:3000`, create an account, and select rTorrent with socket `/socket/rtorrent.sock`. The UI is bound to localhost; use an SSH tunnel or an authenticated reverse proxy for remote access.
 
 ## Volumes
 
@@ -59,8 +97,29 @@ Save it as `docker-compose.yml` . Now all you have to do is `docker-compose up -
 
 ## Environment Variables
 
-Before attempting to launch the container, you should make sure that the volumes you mount are owned by the same UID/GID's you provide as env vars. The container will chown all dirs except /downloads. So just chown your Downloads folder, then set PUID and PGID accordingly, and it just works™.
+When started as root, the entrypoint uses `PUID` and `PGID` (default `1000:1000`), prepares the writable directory roots, and drops privileges with `su-exec`. It does not recursively change existing files or change `/downloads` ownership. Prepare downloads and any existing session/watch files with the correct ownership before startup.
+
+With Docker `--user UID:GID`, the process runs directly as that user. Supply a readable config (a read-only bind mount is supported), pre-create `/watch/load` and `/watch/start`, and make `/session`, `/socket`, `/watch`, and `/downloads` writable by that user. Use pre-owned bind mounts or `volume-nocopy` for prepared named volumes: Docker can reset an empty volume's directory ownership when copying image contents into it.
+
+Only one rTorrent instance may own a session directory. The entrypoint never deletes `rtorrent.lock`; do not delete a lock to bypass a running instance. Before migrating existing torrents, stop the old instance gracefully and back up its session and configuration. Keep that backup for rollback rather than assuming rewritten resume files work with an older client.
 
 ## Ports
 
-The container exposes 49160/udp for DHT and 49161/{tcp,udp} for incoming connections. DHT is disabled by default but it's fairly trivial to enable it.  The XMLRPC port is **not** enabled on rTorrent and therefore not exposed. This is a bad idea *anyway* cause it doesn't support any kind of authentication. You can instead forward requests to the socket through an nginx proxy with digest authentication.
+Publish `49161/tcp` for incoming peers. DHT is disabled by default; if enabled with `dht.port.set = 49160`, also publish `49160/udp`. The RPC endpoint is `/socket/rtorrent.sock` with mode `0770`, not a published TCP port. Give Flood/the proxy the matching UID or GID; socket access grants control of rTorrent and must be restricted to trusted clients.
+
+## Development / local build
+
+From the repository root, build and check a local image instead of using GHCR:
+
+```sh
+docker build -t rtorrent:local .
+docker run --rm --network=none \
+  --mount type=bind,src="$(pwd)/tests",dst=/tests,readonly \
+  --entrypoint sh rtorrent:local /tests/entrypoint.sh
+```
+
+Use `rtorrent:local` in place of the GHCR image in the commands above. For local Compose development, save the Compose file in the repository root, replace the rTorrent service's `image` with `rtorrent:local`, add `build: .`, and run Compose with `--build`.
+
+The multi-stage build verifies both upstream source archives and enables TinyXML2 support. This also provides `system.listMethods`, which Flood needs even when probing JSON-RPC. Clang is used to avoid an Alpine GCC compiler crash in `command_system.cc`; no compiler is included in the runtime image.
+
+The regression checks run in disposable containers without production volumes. They cover repeated bootstrap, existing config and lock preservation, failed initialization, invalid IDs, rejection of a second writer, and graceful shutdown.

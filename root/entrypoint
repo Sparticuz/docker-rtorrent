@@ -1,28 +1,34 @@
 #!/bin/sh
+set -eu
 PUID=${PUID:=1000}
 PGID=${PGID:=1000}
 
-# Copy over default config if none is provided
-if [ ! -f "/config/.rtorrent.rc" ]; then
-	echo "Copying default configuration to /config" >> /dev/stdout
+case "${1:-}" in
+	rtorrent|bootstrap) ;;
+	*) exec "$@" ;;
+esac
+
+case "$PUID" in ''|*[!0-9]*) echo "PUID must be numeric" >&2; exit 1 ;; esac
+case "$PGID" in ''|*[!0-9]*) echo "PGID must be numeric" >&2; exit 1 ;; esac
+
+if [ ! -f /config/.rtorrent.rc ]; then
+	echo "Copying default configuration to /config"
 	cp /dist/.rtorrent.rc.dist /config/.rtorrent.rc
-	if [ "$1" = "bootstrap" ]; then
-		exit 0
+	if [ "$(id -u)" = 0 ]; then
+		chown "$PUID:$PGID" /config/.rtorrent.rc
 	fi
 fi
 
-# Unconditionally remove session lock from previous instances
-rm -f "/session/rtorrent.lock"
+if [ "$1" = bootstrap ]; then
+	exit 0
+fi
 
-# chown rTorrent specific directories
-chown -R "$PUID:$PGID" /config /session /watch /socket
-# chown log "files" so rTorrent can open them
-chown "$PUID:$PGID" \
-	/var/log/rtorrent-error.log \
-	/var/log/rtorrent-info.log
-
-if [ "$1" = 'rtorrent' ]; then
-	exec su-exec $PUID:$PGID "$@"
+mkdir -p /watch/load /watch/start
+if [ "$(id -u)" = 0 ]; then
+	# Existing files remain the owner's responsibility; never rewrite session locks.
+	chown "$PUID:$PGID" /session /watch /watch/load /watch/start /socket
+	chown "$PUID:$PGID" /var/log/rtorrent-error.log /var/log/rtorrent-info.log
+	exec su-exec "$PUID:$PGID" "$@"
 fi
 
 exec "$@"
