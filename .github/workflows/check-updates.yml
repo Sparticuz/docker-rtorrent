@@ -1,0 +1,48 @@
+name: Check for rTorrent updates
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: check-updates-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'branch'
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Test updater
+        run: python3 -m unittest discover -s tests -p 'test_check_updates.py'
+
+      - name: Check latest stable release
+        id: update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/check-updates.py
+
+      - name: Commit and publish update
+        if: steps.update.outputs.updated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.update.outputs.version }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Dockerfile
+          git commit -m "Update rTorrent and libtorrent to $VERSION"
+          git push origin "HEAD:refs/heads/$BRANCH"
+          # GITHUB_TOKEN pushes do not trigger another push workflow.
+          gh workflow run main.yaml --ref "$BRANCH"
