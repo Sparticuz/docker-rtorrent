@@ -67,7 +67,7 @@ volumes:
 
 Save it as `docker-compose.yml` and run `docker compose up -d` after building the local image and preparing directory ownership.
 
-For Flood, use `compose/docker-compose.flood.dist.yml`. From the repository root, create `compose/downloads` and `compose/flood` and make both writable by the chosen `PUID:PGID` (default `1000:1000`). Then run:
+For Flood, use `compose/docker-compose.flood.dist.yml`. It pulls [jesec's official Flood image](https://github.com/jesec/flood#docker), pinned to `jesec/flood:4.16.3`; only rTorrent is built locally. From the repository root, create `compose/downloads` and `compose/flood` and make both writable by the chosen `PUID:PGID` (default `1000:1000`). Then run:
 
 ```sh
 docker compose -f compose/docker-compose.flood.dist.yml up -d --build
