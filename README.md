@@ -66,13 +66,13 @@ volumes:
 
 Save it as `docker-compose.yml` and run `docker compose up -d` after preparing directory ownership.
 
-For Flood, use `compose/docker-compose.flood.dist.yml`. It pulls this fork's published rTorrent image and [jesec's official Flood image](https://github.com/jesec/flood#docker) (`jesec/flood`); no local build is needed. From the repository root, create `compose/downloads` and `compose/flood` and make both writable by the chosen `PUID:PGID` (default `1000:1000`). Then run:
+### Flood integration
 
-```sh
-docker compose -f compose/docker-compose.flood.dist.yml up -d
-```
+Use [Flood's official container instructions](https://github.com/jesec/flood#docker) and [container examples](https://github.com/jesec/flood/discussions/120). To connect Flood to this image:
 
-Open `http://localhost:3000`, create a Flood account, and select rTorrent with socket `/socket/rtorrent.sock`. The example shares `/downloads` with Flood and binds the UI to localhost. Use an SSH tunnel or an authenticated reverse proxy for remote access.
+- Mount the same socket volume into both containers at `/socket`. If using separate Compose projects, reference the same external volume rather than creating project-local volumes.
+- Select rTorrent with Unix socket `/socket/rtorrent.sock`. Run Flood with the matching UID or GID so it can access the socket.
+- Mount the same downloads directory at `/downloads` in both containers, with permissions that allow Flood to manage the files.
 
 ## Volumes
 
@@ -107,7 +107,7 @@ docker run --rm --network=none \
   --entrypoint sh rtorrent:local /tests/entrypoint.sh
 ```
 
-Use `rtorrent:local` in place of the GHCR image in the commands above. For local Compose development, replace the rTorrent service's `image` with `rtorrent:local`, add `build: ..`, and run Compose with `--build`.
+Use `rtorrent:local` in place of the GHCR image in the commands above. For local Compose development, save the Compose file in the repository root, replace the rTorrent service's `image` with `rtorrent:local`, add `build: .`, and run Compose with `--build`.
 
 The multi-stage build verifies both upstream source archives and enables TinyXML2 support. This also provides `system.listMethods`, which Flood needs even when probing JSON-RPC. Clang is used to avoid an Alpine GCC compiler crash in `command_system.cc`; no compiler is included in the runtime image.
 
