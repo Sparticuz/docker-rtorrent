@@ -15,7 +15,7 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
   flood:
-    image: jesec/flood:4.16.3
+    image: jesec/flood
     user: "${PUID:-1000}:${PGID:-1000}"
     command: ["--host=0.0.0.0", "--rundir=/config", "--allowedpath=/downloads"]
     depends_on:
