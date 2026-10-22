@@ -63,6 +63,26 @@ Use [Flood's official container instructions](https://github.com/jesec/flood#doc
 - Select rTorrent with Unix socket `/socket/rtorrent.sock`. Run Flood with the matching UID or GID so it can access the socket.
 - Mount the same downloads directory at `/downloads` in both containers, with permissions that allow Flood to manage the files.
 
+Merge this `flood` service into the same `services` block as the rTorrent example above; keep its existing `rtorrent-sock` volume declaration:
+
+```yaml
+services:
+  flood:
+    image: jesec/flood
+    user: "1000:1000"
+    command: ["--host=0.0.0.0", "--rundir=/config", "--allowedpath=/downloads"]
+    depends_on:
+      - rtorrent
+    volumes:
+      - "./flood:/config"
+      - "./downloads:/downloads"
+      - "rtorrent-sock:/socket"
+    ports:
+      - "127.0.0.1:3000:3000"
+```
+
+Create `./flood` and `./downloads` before starting Compose and make both writable by `1000:1000`. If you change rTorrent's `PUID:PGID`, update Flood's `user` to match. Run `docker compose up -d`, open `http://localhost:3000`, create an account, and select rTorrent with socket `/socket/rtorrent.sock`. The UI is bound to localhost; use an SSH tunnel or an authenticated reverse proxy for remote access.
+
 ## Volumes
 
 | Volume     | Explanation                              |
