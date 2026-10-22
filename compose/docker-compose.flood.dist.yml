@@ -1,7 +1,8 @@
-version: "3"
 services:
   rtorrent:
-    image: looselyrigorous/rtorrent:0.3.2
+    build: ..
+    image: rtorrent:local
+    stop_grace_period: 2m
     volumes:
       - "./downloads:/downloads"
       - "./session:/session"
@@ -10,20 +11,20 @@ services:
       - "rtorrent-sock:/socket"
     ports:
       - "49161:49161"
-      - "49161:49161/udp"
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
   flood:
-    # You should build the flood image yourself,
-    # as there is no official Docker Hub build.
-    # https://github.com/jfurrow/flood/wiki/Docker
-    build: ./flood-build
+    image: jesec/flood:4.16.3
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command: ["--host=0.0.0.0", "--rundir=/config", "--allowedpath=/downloads"]
+    depends_on:
+      - rtorrent
     volumes:
-      - "rtorrent-sock:/data"
+      - "rtorrent-sock:/socket"
+      - "./flood:/config"
+      - "./downloads:/downloads"
     ports:
-      - "3000:3000"
-    environment:
-      - "RTORRENT_SOCK=true"
+      - "127.0.0.1:3000:3000"
 volumes:
   rtorrent-sock: {}
