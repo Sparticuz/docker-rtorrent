@@ -1,5 +1,5 @@
 # rTorrent on Alpine
-This fork runs upstream rTorrent/libtorrent 0.16.25 on Alpine 3.24. It keeps the original container's mount layout and exposes XML-RPC and JSON-RPC over a shared Unix SCGI socket for [Flood](https://github.com/jesec/flood) or an HTTP proxy. No web UI is bundled.
+This fork runs upstream rTorrent/libtorrent on Alpine. It keeps the original container's mount layout and exposes XML-RPC and JSON-RPC over a shared Unix SCGI socket for [Flood](https://github.com/jesec/flood) or an HTTP proxy. No web UI is bundled.
 
 ## Build and check
 
@@ -12,7 +12,7 @@ docker run --rm --network=none \
   --entrypoint sh rtorrent:local /tests/entrypoint.sh
 ```
 
-The multi-stage build verifies both upstream source archives and enables TinyXML2 support. This also provides `system.listMethods`, which Flood needs even when probing JSON-RPC. Clang is used because Alpine's GCC 15.2 crashed compiling `command_system.cc`; no compiler is included in the runtime image.
+The multi-stage build verifies both upstream source archives and enables TinyXML2 support. This also provides `system.listMethods`, which Flood needs even when probing JSON-RPC. Clang is used to avoid an Alpine GCC compiler crash in `command_system.cc`; no compiler is included in the runtime image.
 
 The regression checks run in disposable containers without production volumes. They cover repeated bootstrap, existing config and lock preservation, failed initialization, invalid IDs, rejection of a second writer, and graceful shutdown.
 
@@ -25,7 +25,7 @@ mkdir -p config downloads session watch socket
 docker run --rm -v "$(pwd)/config:/config" rtorrent:local bootstrap
 ```
 
-Existing configs are not migrated automatically. For 0.16.25, use `schedule` instead of `schedule2` and `network.listen.port.*` instead of `network.port_*`. Remove `encoding.add`, `trackers.use_udp.set`, and obsolete `network.http.max_open.set` / `network.max_open_files.set` settings. The default config now leaves file/socket allocation to upstream and uses `protocol.encryption.set = allow`.
+Existing configs are not migrated automatically. When migrating to this image, use `schedule` instead of `schedule2` and `network.listen.port.*` instead of `network.port_*`. Remove `encoding.add`, `trackers.use_udp.set`, and obsolete `network.http.max_open.set` / `network.max_open_files.set` settings. The default config now leaves file/socket allocation to upstream and uses `protocol.encryption.set = allow`.
 
 ## Running
 
@@ -67,13 +67,13 @@ volumes:
 
 Save it as `docker-compose.yml` and run `docker compose up -d` after building the local image and preparing directory ownership.
 
-For Flood, use `compose/docker-compose.flood.dist.yml`. It pulls [jesec's official Flood image](https://github.com/jesec/flood#docker), pinned to `jesec/flood:4.16.3`; only rTorrent is built locally. From the repository root, create `compose/downloads` and `compose/flood` and make both writable by the chosen `PUID:PGID` (default `1000:1000`). Then run:
+For Flood, use `compose/docker-compose.flood.dist.yml`. It pulls [jesec's official Flood image](https://github.com/jesec/flood#docker) (`jesec/flood`); only rTorrent is built locally. From the repository root, create `compose/downloads` and `compose/flood` and make both writable by the chosen `PUID:PGID` (default `1000:1000`). Then run:
 
 ```sh
 docker compose -f compose/docker-compose.flood.dist.yml up -d --build
 ```
 
-Open `http://localhost:3000`, create a Flood account, and select rTorrent with socket `/socket/rtorrent.sock`. The example builds this fork, shares `/downloads` with Flood, and binds the UI to localhost. Use an SSH tunnel or an authenticated reverse proxy for remote access. The older Kubernetes examples and publishing workflow have not been migrated; do not use them to deploy or publish this fork.
+Open `http://localhost:3000`, create a Flood account, and select rTorrent with socket `/socket/rtorrent.sock`. The example builds this fork, shares `/downloads` with Flood, and binds the UI to localhost. Use an SSH tunnel or an authenticated reverse proxy for remote access. The older publishing workflow has not been migrated; do not use it to publish this fork.
 
 ## Volumes
 
