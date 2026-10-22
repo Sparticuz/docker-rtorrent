@@ -1,7 +1,6 @@
 services:
   rtorrent:
-    build: ..
-    image: rtorrent:local
+    image: ghcr.io/sparticuz/docker-rtorrent:latest
     stop_grace_period: 2m
     volumes:
       - "./downloads:/downloads"
