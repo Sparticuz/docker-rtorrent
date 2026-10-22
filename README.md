@@ -18,7 +18,7 @@ The regression checks run in disposable containers without production volumes. T
 
 ## Published image
 
-GitHub Actions builds and tests both `linux/amd64` and `linux/arm64` before publishing a multi-platform image to `ghcr.io/sparticuz/docker-rtorrent`. Docker selects the matching architecture when pulling. ARM64 checks run under QEMU emulation. Publishing uses the built-in `GITHUB_TOKEN` with package-write permission; no Docker Hub credentials or personal token are needed.
+GitHub Actions builds and tests both `linux/amd64` and `linux/arm64` on native runners before publishing a multi-platform image to `ghcr.io/sparticuz/docker-rtorrent`. Docker selects the matching architecture when pulling. Each tested architecture is also published as `sha-<full-commit-sha>-<architecture>`. Publishing uses the built-in `GITHUB_TOKEN` with package-write permission; no Docker Hub credentials or personal token are needed.
 
 Pushes publish `branch-<branch>` or `tag-<git-tag>`, plus `sha-<full-commit-sha>`. Only the default branch publishes `latest`. The workflow can also be run manually on a selected ref.
 
