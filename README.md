@@ -3,21 +3,11 @@ This fork runs upstream rTorrent/libtorrent on Alpine. It keeps the original con
 
 ## Published image
 
-GitHub Actions builds and tests both `linux/amd64` and `linux/arm64` on native runners before publishing a multi-platform image to `ghcr.io/sparticuz/docker-rtorrent`. Docker selects the matching architecture when pulling. Each tested architecture is also published as `sha-<full-commit-sha>-<architecture>`. Publishing uses the built-in `GITHUB_TOKEN` with package-write permission; no Docker Hub credentials or personal token are needed.
-
-Pushes publish `branch-<branch>` or `tag-<git-tag>`, plus `sha-<full-commit-sha>`. Only the default branch publishes `latest`. The workflow can also be run manually on a selected ref.
-
-```sh
-docker pull ghcr.io/sparticuz/docker-rtorrent:latest
-```
-
-The examples use `latest`, which becomes available after the first successful default-branch build.
-
-New GHCR packages are private by default. For private pulls, log in to `ghcr.io` with a classic personal access token that has `read:packages`, or make the package public in its GitHub package settings.
+GitHub Actions builds and tests both `linux/amd64` and `linux/arm64` on native runners before publishing a multi-platform image to `ghcr.io/sparticuz/docker-rtorrent`. Docker selects the matching architecture when pulling. Each tested architecture is also published as `sha-<full-commit-sha>-<architecture>`.
 
 ## Configuration
 
-The container copies its default configuration only if `/config/.rtorrent.rc` does not exist. Bootstrap is repeatable and leaves existing config and session files alone:
+The container copies its default configuration only if `/config/.rtorrent.rc` does not exist.
 
 ```sh
 mkdir -p config downloads session watch socket
@@ -48,7 +38,6 @@ Or use Docker Compose:
 services:
   rtorrent:
     image: ghcr.io/sparticuz/docker-rtorrent:latest
-    stop_grace_period: 2m
     volumes:
       - "./downloads:/downloads"
       - "./session:/session"
