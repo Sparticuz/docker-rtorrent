@@ -16,6 +16,20 @@ The multi-stage build verifies both upstream source archives and enables TinyXML
 
 The regression checks run in disposable containers without production volumes. They cover repeated bootstrap, existing config and lock preservation, failed initialization, invalid IDs, rejection of a second writer, and graceful shutdown.
 
+## Published image
+
+GitHub Actions builds and tests the `linux/amd64` image before publishing it to `ghcr.io/sparticuz/docker-rtorrent`. It uses the built-in `GITHUB_TOKEN` with package-write permission; no Docker Hub credentials or personal token are needed for publishing.
+
+Pushes publish `branch-<branch>` or `tag-<git-tag>`, plus `sha-<full-commit-sha>`. Only the default branch publishes `latest`. The workflow can also be run manually on a selected ref.
+
+```sh
+docker pull ghcr.io/sparticuz/docker-rtorrent:latest
+```
+
+Use that image in place of `rtorrent:local` in the commands below, or replace the rTorrent service's `build` and `image` entries in the Flood Compose example with `image: ghcr.io/sparticuz/docker-rtorrent:latest`. Before the first successful default-branch build, use a published branch tag instead.
+
+New GHCR packages are private by default. For private pulls, log in to `ghcr.io` with a classic personal access token that has `read:packages`, or make the package public in its GitHub package settings.
+
 ## Configuration
 
 The container copies its default configuration only if `/config/.rtorrent.rc` does not exist. Bootstrap is repeatable and leaves existing config and session files alone:
@@ -73,7 +87,7 @@ For Flood, use `compose/docker-compose.flood.dist.yml`. It pulls [jesec's offici
 docker compose -f compose/docker-compose.flood.dist.yml up -d --build
 ```
 
-Open `http://localhost:3000`, create a Flood account, and select rTorrent with socket `/socket/rtorrent.sock`. The example builds this fork, shares `/downloads` with Flood, and binds the UI to localhost. Use an SSH tunnel or an authenticated reverse proxy for remote access. The older publishing workflow has not been migrated; do not use it to publish this fork.
+Open `http://localhost:3000`, create a Flood account, and select rTorrent with socket `/socket/rtorrent.sock`. The example builds this fork, shares `/downloads` with Flood, and binds the UI to localhost. Use an SSH tunnel or an authenticated reverse proxy for remote access.
 
 ## Volumes
 
