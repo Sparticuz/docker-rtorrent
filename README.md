@@ -18,6 +18,8 @@ docker run --rm -v "$(pwd)/config:/config" ghcr.io/sparticuz/docker-rtorrent:lat
 
 Existing configs are not migrated automatically. When migrating to this image, use `schedule` instead of `schedule2` and `network.listen.port.*` instead of `network.port_*`. Remove `encoding.add`, `trackers.use_udp.set`, and obsolete `network.http.max_open.set` / `network.max_open_files.set` settings. The default config now leaves file/socket allocation to upstream and uses `protocol.encryption.set = allow`.
 
+For rTorrent/libtorrent 0.16.26, replace the legacy `info` logging group with `events`, and replace `critical` / `error` / `warn` outputs with a single `errors` output. The default config sends events to stdout and errors to stderr; existing configs need this change before upgrading.
+
 ## Running
 
 Run the published image directly:

@@ -19,15 +19,12 @@ method.insert = cfg.socketfile,    private|const|string, (cat,(cfg.socketdir),"r
 
 # Move logging higher in the config file for easier debugging
 # Logging:
-#   Levels = critical error warn notice info debug
-#   Groups = connection_* dht_* peer_* rpc_* storage_* thread_* tracker_* torrent_*
+#   Groups = errors events debug_trace and subsystem-specific groups
 #print = (cat, "Logging to ", (cfg.info_logfile), ", ", (cfg.error_logfile))
 log.open_file = "info-log", (cfg.info_logfile)
-log.add_output = "info", "info-log"
+log.add_output = "events", "info-log"
 log.open_file = "error-log", (cfg.error_logfile)
-log.add_output = "critical", "error-log"
-log.add_output = "error", "error-log"
-log.add_output = "warn", "error-log"
+log.add_output = "errors", "error-log"
 
 # Listening port for incoming peer traffic (fixed; you can also randomize it)
 network.listen.port.range.set = 49161-49161
