@@ -3,17 +3,17 @@ RUN apk add --no-cache build-base clang curl curl-dev linux-headers ncurses-dev 
 ENV CC=clang CXX=clang++
 # Alpine's GCC 15.2 crashes compiling rTorrent's command_system.cc.
 WORKDIR /build
-RUN curl -fL -o libtorrent.tar.gz https://github.com/rakshasa/rtorrent/releases/download/v0.16.26/libtorrent-0.16.26.tar.gz \
-    && curl -fL -o rtorrent.tar.gz https://github.com/rakshasa/rtorrent/releases/download/v0.16.26/rtorrent-0.16.26.tar.gz \
-    && echo '19da1441ed628117025ff6a5d2035c5e6d81126fc9d442d8b10210df4246420c  libtorrent.tar.gz' | sha256sum -c - \
-    && echo 'd10811b0678745e5c7b557c4394d54f7fd564d37cbdeb236d0e2f63a0f72918b  rtorrent.tar.gz' | sha256sum -c - \
+RUN curl -fL -o libtorrent.tar.gz https://github.com/rakshasa/rtorrent/releases/download/v0.16.27/libtorrent-0.16.27.tar.gz \
+    && curl -fL -o rtorrent.tar.gz https://github.com/rakshasa/rtorrent/releases/download/v0.16.27/rtorrent-0.16.27.tar.gz \
+    && echo 'b7ee3f637da6d136fb70a4566fbea8e444f7a2e259596e8612adeb0c7c520fd1  libtorrent.tar.gz' | sha256sum -c - \
+    && echo '645e5ea863fee2c3a0f745be6235a37e80cf7db6a07bc82ca31d49bf65f2a52a  rtorrent.tar.gz' | sha256sum -c - \
     && tar -xzf libtorrent.tar.gz \
     && tar -xzf rtorrent.tar.gz \
-    && cd libtorrent-0.16.26 \
+    && cd libtorrent-0.16.27 \
     && ./configure \
     && make -j "$(nproc)" \
     && make install-strip \
-    && cd ../rtorrent-0.16.26 \
+    && cd ../rtorrent-0.16.27 \
     && ./configure --with-xmlrpc-tinyxml2 \
     && make -j "$(nproc)" \
     && make install-strip
